@@ -20,14 +20,23 @@ class Visualise(InitDB):
         chart_placeholder = st.empty()
         chart_placeholder_v2 = st.empty()
 
-        if st.button("Reset streaming") or "df" not in st.session_state:
+        if st.button("Reset streaming"): # or "df" not in st.session_state:
             st.session_state.df = pd.DataFrame([])
+
+        if 'df_chart' not in st.session_state:
+            st.session_state.df_chart = pd.DataFrame(columns=["time", "value"])
+
+        if 'df_opcua' not in st.session_state:
+            st.session_state.df_opcua = pd.DataFrame(columns=["time", "value"])
+
 
         @st.fragment(run_every=0.5)
         def write_chart():
             query_sin = f"""
             from(bucket: "{self.bucket}")
             |> range (start: -2s)
+            |> filter(fn: (r) => r._measurement == "sin_val1")
+            |> filter(fn: (r) => r._field == "field2")
             """
             data = []
             tables = self.query_api.query(query_sin)
@@ -37,8 +46,29 @@ class Visualise(InitDB):
                     data.append({"time": formatted_time, "value": record.get_value()})
             if data:
                 new_data = pd.DataFrame(data)
-                st.session_state.df = pd.concat([st.session_state.df, new_data], ignore_index=True)
-                df = st.session_state.df
+                st.session_state.df_chart = pd.concat([st.session_state.df_chart, new_data], ignore_index=True)
+                df = st.session_state.df_chart
+                st.scatter_chart(df, x='time', y='value', color='#add8e6',
+                                 use_container_width=True)
+
+        @st.fragment(run_every=0.5)
+        def write_opcua():
+            query_sin = f"""
+            from(bucket: "{self.bucket}")
+            |> range (start: -2s)
+            |> filter(fn: (r) => r._measurement == "opc_val1")
+            |> filter(fn: (r) => r._field == "field3")
+            """
+            data = []
+            tables = self.query_api.query(query_sin)
+            for table in tables:
+                for record in table.records:
+                    formatted_time = record.get_time().strftime('%H:%M:%S')
+                    data.append({"time": formatted_time, "value": record.get_value()})
+            if data:
+                new_data = pd.DataFrame(data)
+                st.session_state.df_opcua = pd.concat([st.session_state.df_opcua, new_data], ignore_index=True)
+                df = st.session_state.df_opcua
                 st.scatter_chart(df, x='time', y='value', color='#add8e6',
                                  use_container_width=True)
 
@@ -48,11 +78,11 @@ class Visualise(InitDB):
         with row1_column1:
             write_chart()
         with row1_column2:
-            write_chart()
+            write_opcua()
         with row2_column1:
             write_chart()
         with row2_column2:
-            write_chart()
+            write_opcua()
 
         '''
         with chart_placeholder:
