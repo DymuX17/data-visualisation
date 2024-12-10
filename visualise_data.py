@@ -9,13 +9,16 @@ import datetime
 class Visualise(InitDB):
     def __init__(self):
         super().__init__()
-        st.set_page_config("st.fragment_visualisation", page_icon="*")
+        st.set_page_config("st.fragment_visualisation", page_icon="*", layout="wide")
+
+        # Repeat the chart placement logic here
 
     def plot_sin(self):
         st.header('Sinus visualisation')
         st.caption("Every second chart is updated with latest data from `InfluxDB`")
 
         chart_placeholder = st.empty()
+        chart_placeholder_v2 = st.empty()
 
         if st.button("Reset streaming") or "df" not in st.session_state:
             st.session_state.df = pd.DataFrame([])
@@ -39,12 +42,27 @@ class Visualise(InitDB):
                 st.scatter_chart(df, x='time', y='value', color='#add8e6',
                                  use_container_width=True)
 
-        with chart_placeholder:
+        row1_column1, row1_column2 = st.columns([2, 2])
+        row2_column1, row2_column2 = st.columns([2, 2])
+
+        with row1_column1:
+            write_chart()
+        with row1_column2:
+            write_chart()
+        with row2_column1:
+            write_chart()
+        with row2_column2:
             write_chart()
 
+        '''
+        with chart_placeholder:
+            write_chart()
+        with chart_placeholder_v2:
+            write_chart()
+        '''
 
 
-
+'''
             def generate_chart():
                 # rng = np.random.default_rng()
                 new_data = pd.DataFrame(rng.random((2, 3)), columns=["a", "b", "c"])
@@ -55,4 +73,4 @@ class Visualise(InitDB):
                 st.caption(f"Last updated {datetime.datetime.now()}")
 
 
-
+'''
