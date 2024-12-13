@@ -16,10 +16,8 @@ pages = {
     ],
 }
 
-# Ustawienie nawigacji
 pg = st.navigation(pages)
 
-# Wywołanie bieżącej strony
 pg.run()
 
 

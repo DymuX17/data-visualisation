@@ -46,19 +46,19 @@ class Visualise(InitDB):
                     data.append({"time": formatted_time, "value": record.get_value()})
             if data:
                 new_data = pd.DataFrame(data)
-                st.session_state.df_chart = pd.concat([st.session_state.df_chart, new_data], ignore_index=True)
+                if st.session_state.df_chart.empty:
+                    st.session_state.df_chart = new_data
+                else:
+                    st.session_state.df_chart = pd.concat([st.session_state.df_chart, new_data], ignore_index=True)
+
                 df = st.session_state.df_chart
                 st.scatter_chart(df, x='time', y='value', color='#add8e6',
                                  use_container_width=True)
 
         @st.fragment(run_every=0.5)
         def write_opcua():
-            query_sin = f"""
-            from(bucket: "{self.bucket}")
-            |> range (start: -2s)
-            |> filter(fn: (r) => r._measurement == "opc_val1")
-            |> filter(fn: (r) => r._field == "field3")
-            """
+            query_sin = utilis.write_query(self.bucket, "opc_val1", "field3")
+
             data = []
             tables = self.query_api.query(query_sin)
             for table in tables:
@@ -67,7 +67,10 @@ class Visualise(InitDB):
                     data.append({"time": formatted_time, "value": record.get_value()})
             if data:
                 new_data = pd.DataFrame(data)
-                st.session_state.df_opcua = pd.concat([st.session_state.df_opcua, new_data], ignore_index=True)
+                if st.session_state.df_opcua.empty:
+                    st.session_state.df_opcua = new_data
+                else:
+                    st.session_state.df_opcua = pd.concat([st.session_state.df_opcua, new_data], ignore_index=True)
                 df = st.session_state.df_opcua
                 st.scatter_chart(df, x='time', y='value', color='#add8e6',
                                  use_container_width=True)
