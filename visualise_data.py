@@ -3,7 +3,9 @@ import streamlit as st
 from streamlit import fragment
 import pandas as pd
 from init_db_conn import InitDB
+import utilis
 import datetime
+import numpy as np
 
 
 class Visualise(InitDB):
@@ -11,17 +13,12 @@ class Visualise(InitDB):
         super().__init__()
         st.set_page_config("st.fragment_visualisation", page_icon="*", layout="wide")
 
-        # Repeat the chart placement logic here
-
     def plot_sin(self):
         st.header('Sinus visualisation')
         st.caption("Every second chart is updated with latest data from `InfluxDB`")
 
-        chart_placeholder = st.empty()
-        chart_placeholder_v2 = st.empty()
-
-        if st.button("Reset streaming"): # or "df" not in st.session_state:
-            st.session_state.df = pd.DataFrame([])
+        # chart_placeholder = st.empty()
+        # chart_placeholder_v2 = st.empty()
 
         if 'df_chart' not in st.session_state:
             st.session_state.df_chart = pd.DataFrame(columns=["time", "value"])
@@ -29,15 +26,18 @@ class Visualise(InitDB):
         if 'df_opcua' not in st.session_state:
             st.session_state.df_opcua = pd.DataFrame(columns=["time", "value"])
 
+        @st.fragment(run_every=0.5)
+        def reset_streaming():
+            if st.button("Reset streaming data"):  # or "df" not in st.session_state:
+                st.session_state.df_chart = pd.DataFrame(columns=["time", ""])
+                st.session_state.df_opcua = pd.DataFrame(columns=["time", ""])
+
+        st.caption("Online data visualised using `OPCUA`")
 
         @st.fragment(run_every=0.5)
         def write_chart():
-            query_sin = f"""
-            from(bucket: "{self.bucket}")
-            |> range (start: -2s)
-            |> filter(fn: (r) => r._measurement == "sin_val1")
-            |> filter(fn: (r) => r._field == "field2")
-            """
+            query_sin = utilis.write_query(self.bucket, "sin_val1", "field2")
+
             data = []
             tables = self.query_api.query(query_sin)
             for table in tables:
@@ -74,7 +74,22 @@ class Visualise(InitDB):
 
         row1_column1, row1_column2 = st.columns([2, 2])
         row2_column1, row2_column2 = st.columns([2, 2])
+        row3_column1, row3_column2 = st.columns([2, 2])
 
+        with row1_column1:
+            write_chart()
+        with row1_column2:
+            write_opcua()
+        with row2_column1:
+            write_opcua()
+        with row2_column2:
+            write_opcua()
+        with row3_column1:
+            reset_streaming()
+
+
+
+'''
         with row1_column1:
             write_chart()
         with row1_column2:
@@ -83,13 +98,13 @@ class Visualise(InitDB):
             write_chart()
         with row2_column2:
             write_opcua()
-
-        '''
-        with chart_placeholder:
+            
+            with chart_placeholder:
             write_chart()
         with chart_placeholder_v2:
             write_chart()
-        '''
+            
+'''
 
 
 '''

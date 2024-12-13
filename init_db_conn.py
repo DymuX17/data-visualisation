@@ -15,7 +15,10 @@ class InitDB:
             self.token = os.getenv("INFLUX_TOKEN")
             self.org = os.getenv("INFLUX_ORG")
             self.url = os.getenv("INFLUX_URL")
-            self.bucket = os.getenv("INFLUX_BUCKET")
+            if "bucket" not in st.session_state:
+                st.session_state.bucket = os.getenv("INFLUX_BUCKET")
+            # self.bucket = os.getenv("INFLUX_BUCKET")
+            self.bucket = st.session_state.bucket
             self.client = None
             self.write_api = None
             self.query_api = None
