@@ -8,7 +8,7 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 from init_db_conn import InitDB
 import utilis
 
-class Visualise(InitDB):
+class VisualiseSnap7(InitDB):
     def __init__(self):
         super().__init__()
         self.token = os.getenv("INFLUX_TOKEN")
@@ -19,23 +19,22 @@ class Visualise(InitDB):
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
         self.query_api = self.client.query_api()
 
-        if 'data' not in st.session_state:
-            st.session_state.data = {
-                'wartosc_zadana': pd.DataFrame(columns=["time", "value"]),
-                'temperatura': pd.DataFrame(columns=["time", "value"]),
-                'df_IE': pd.DataFrame(columns=["time", "value"]),
-                'df_ISE': pd.DataFrame(columns=["time", "value"]),
-                'df_IAE': pd.DataFrame(columns=["time", "value"]),
-                'uchyb': pd.DataFrame(columns=["time", "value"]),
-                'df_max': pd.DataFrame(columns=["time", "value"]),
-                'df_min': pd.DataFrame(columns=["time", "value"]),
-                'df_mean': pd.DataFrame(columns=["time", "value"]),
-                'df_std': pd.DataFrame(columns=["time", "value"]),
+        if 'data_snap7' not in st.session_state:
+            st.session_state.data_snap7 = {
+                'wartosc_zadana1': pd.DataFrame(columns=["time", "value"]),
+                'temperatura1': pd.DataFrame(columns=["time", "value"]),
+                'df_IE2': pd.DataFrame(columns=["time", "value"]),
+                'df_ISE2': pd.DataFrame(columns=["time", "value"]),
+                'df_IAE2': pd.DataFrame(columns=["time", "value"]),
+                'df_max2': pd.DataFrame(columns=["time", "value"]),
+                'df_min2': pd.DataFrame(columns=["time", "value"]),
+                'df_mean2': pd.DataFrame(columns=["time", "value"]),
+                'df_std2': pd.DataFrame(columns=["time", "value"]),
             }
 
     def reset_streaming(self):
-        for key in st.session_state.data:
-            st.session_state.data[key] = pd.DataFrame(columns=["time", "value"])
+        for key in st.session_state.data_snap7:
+            st.session_state.data_snap7[key] = pd.DataFrame(columns=["time", "value"])
         st.info("Wizualizacja została zresetowana.")
 
     def fetch_all_data(self, bucket):
@@ -62,22 +61,19 @@ class Visualise(InitDB):
         df = pd.DataFrame(records)
 
         data_mapping = {
-            "test-topic": "wartosc_zadana",
-            "test-topic2": "temperatura",
-            "IE": "df_IE",
-            "ISE": "df_ISE",
-            "IAE": "df_IAE",
-            "ErrorValues": "uchyb",
-            "ErrorStats1": "df_max",
-            "ErrorStats11": "df_min",
-            "ErrorStats111": "df_mean",
-            "ErrorStats1111": "df_std",
+            "test-topic3": "wartosc_zadana1",
+            "test-topic4": "temperatura1",
+            "IE2": "df_IE2",
+            "ISE2": "df_ISE2",
+            "IAE2": "df_IAE2",
+            "ErrorStats2": "df_max2",
+            "ErrorStats22": "df_min2",
+            "ErrorStats222": "df_mean2",
+            "ErrorStats2222": "df_std2",
         }
 
         for measurement, key in data_mapping.items():
-            if measurement == "ErrorValues":
-                filtered_df = df[(df["measurement"] == measurement) & (df["field"] == "error_signal1")]
-            elif measurement in ["ErrorStats1", "ErrorStats11", "ErrorStats111", "ErrorStats1111"]:
+            if measurement in ["ErrorStats2", "ErrorStats22", "ErrorStats222", "ErrorStats2222"]:
                 filtered_df = df[df["measurement"] == measurement]
             elif "topic" in measurement:
                 filtered_df = df[(df["measurement"] == measurement) & (df["field"] == "field3")]
@@ -87,18 +83,18 @@ class Visualise(InitDB):
             filtered_df = filtered_df[["time", "value"]]
 
             if not filtered_df.empty:
-                if st.session_state.data[key].empty:
-                    st.session_state.data[key] = filtered_df
+                if st.session_state.data_snap7[key].empty:
+                    st.session_state.data_snap7[key] = filtered_df
                 else:
-                    st.session_state.data[key] = pd.concat(
-                        [st.session_state.data[key], filtered_df],
+                    st.session_state.data_snap7[key] = pd.concat(
+                        [st.session_state.data_snap7[key], filtered_df],
                         ignore_index=True
                     ).drop_duplicates().sort_values(by="time").tail(1600)
 
     def render_chart(self, key, title):
         st.subheader(title)
-        if not st.session_state.data[key].empty:
-            data = st.session_state.data[key]
+        if not st.session_state.data_snap7[key].empty:
+            data = st.session_state.data_snap7[key]
             chart = alt.Chart(data).mark_line().encode(
                 x=alt.X("time", title="Czas"),
                 y=alt.Y("value", title="Wartość", scale=alt.Scale(zero=False)),
@@ -111,43 +107,54 @@ class Visualise(InitDB):
         else:
             st.warning(f'Brak dostępnych danych - {title}')
 
+
     def render_combined_chart(self, key1, key2, title):
+        """
+        Renderuje wykres łączony dla dwóch kluczy danych.
+        """
         st.subheader(title)
 
-        if not st.session_state.data[key1].empty and not st.session_state.data[key2].empty:
-            df1 = st.session_state.data[key1].copy()
-            df2 = st.session_state.data[key2].copy()
+        # Sprawdzenie, czy oba klucze mają dane
+        if not st.session_state.data_snap7[key1].empty and not st.session_state.data_snap7[key2].empty:
+            df1 = st.session_state.data_snap7[key1].copy()
+            df2 = st.session_state.data_snap7[key2].copy()
 
-            df1['source'] = 'temperatura'
-            df2['source'] = 'wartość zad.'
+            # Dodanie kolumny źródła, aby rozróżnić dane
+            df1['source'] = 'Temperatura'
+            df2['source'] = 'Wartość zadana'
 
+            # Połączenie danych w jeden DataFrame
             combined_df = pd.concat([df1, df2], ignore_index=True).drop_duplicates().sort_values(by="time")
 
+            # Tworzenie wykresu za pomocą Altair
             chart = alt.Chart(combined_df).mark_line().encode(
                 x=alt.X("time", title="Czas"),
                 y=alt.Y("value", title="Wartość", scale=alt.Scale(zero=False)),
-                color=alt.Color("source", legend=alt.Legend(title="", orient="top-left")),
+                color=alt.Color("source", legend=alt.Legend(title="Źródło")),
                 tooltip=["time", "value", "source"]
             ).properties(
                 width="container",
                 height=325
             )
+
+            # Wyświetlenie wykresu
             st.altair_chart(chart, use_container_width=True)
         else:
-            st.warning(f'Brak dostępnych danych - {title}')
+            st.warning(f"Brak dostępnych danych dla {title}")
+
 
     def render_combined_chart_with_stats(self, title):
         st.subheader(title)
 
         data_frames = []
         for key, label in {
-            "df_max": "Maksimum",
-            "df_min": "Minimum",
-            "df_mean": "Średnia",
-            "df_std": "Odch. stand."
+            "df_max2": "Maksimum",
+            "df_min2": "Minimum",
+            "df_mean2": "Średnia",
+            "df_std2": "Odch. stand."
         }.items():
-            if not st.session_state.data[key].empty:
-                df = st.session_state.data[key].copy()
+            if not st.session_state.data_snap7[key].empty:
+                df = st.session_state.data_snap7[key].copy()
                 df["source"] = label
                 data_frames.append(df)
 
@@ -168,7 +175,7 @@ class Visualise(InitDB):
             st.warning("Brak dostępnych danych dla statystyk.")
 
     def plot_sin(self):
-        st.header('Monitorowanie i analiza jakości sterowania piecem w czasie rzeczywistym - OPC-UA')
+        st.header('Monitorowanie i analiza jakości sterowania piecem w czasie rzeczywistym - S7Conn')
         st.caption("Dane są odświeżane co 1 sekundę")
 
         st.sidebar.button("Zresetuj wizualizację", on_click=self.reset_streaming)
@@ -181,18 +188,15 @@ class Visualise(InitDB):
             row2_column1, row2_column2 = st.columns([2, 2])
 
             with row1_column1:
-                self.render_combined_chart("wartosc_zadana", "temperatura", "Wykres temperatury i wartości zadanej")
+                self.render_combined_chart("wartosc_zadana1", "temperatura1", "Wykres temperatury i wartości zadanej")
 
             with row1_column2:
                 self.render_combined_chart_with_stats("Wykres statystyk")
 
             with row2_column1:
-                self.render_chart("df_ISE", "Wskaźnik ISE")
+                self.render_chart("df_ISE2", "Wskaźnik ISE")
 
             with row2_column2:
-                self.render_chart("df_IAE", "Wskaźnik IAE")
-
-
-
+                self.render_chart("df_IAE2", "Wskaźnik IAE")
 
         show_charts()

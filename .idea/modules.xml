@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/a_data_visualisation.iml" filepath="$PROJECT_DIR$/.idea/a_data_visualisation.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/data-visualisation.iml" filepath="$PROJECT_DIR$/.idea/data-visualisation.iml" />
     </modules>
   </component>
 </project>
